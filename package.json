@@ -1,0 +1,61 @@
+{
+    "name": "Tadrosoon",
+    "version": "1.0.1",
+    "description": "A free WebRTC browser-based video call",
+    "main": "server.js",
+    "scripts": {
+        "dev": "nodemon app/src/server.js",
+        "start": "node app/src/server.js",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "npx prettier --write .",
+        "migration:run": "db-migrate up",
+        "migration:down": "db-migrate down",
+        "migration:create": "npx db-migrate create tableName --sql-file",
+        "migration:reset": "db-migrate reset"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/miroslavpejic85/Tadrosoon"
+    },
+    "keywords": [
+        "webrtc",
+        "socket.io",
+        "p2p",
+        "nodejs",
+        "video"
+    ],
+    "author": "Miroslav Pejic",
+    "license": "AGPL-3.0",
+    "homepage": "https://github.com/miroslavpejic85/Tadrosoon",
+    "dependencies": {
+        "@sentry/integrations": "^7.33.0",
+        "@sentry/node": "^7.33.0",
+        "bcrypt": "^5.1.0",
+        "body-parser": "^1.20.1",
+        "colors": "^1.4.0",
+        "compression": "^1.7.4",
+        "cors": "^2.8.5",
+        "crypto-js": "^4.1.1",
+        "db-migrate": "^0.11.13",
+        "db-migrate-pg": "^1.2.2",
+        "dotenv": "^16.0.3",
+        "ejs": "^3.1.8",
+        "express": "^4.18.2",
+        "express-flash": "^0.0.2",
+        "express-session": "^1.17.3",
+        "ngrok": "^4.3.3",
+        "nodemon": "^2.0.20",
+        "passport": "^0.6.0",
+        "passport-local": "^1.0.0",
+        "pg": "^8.9.0",
+        "qs": "^6.11.0",
+        "socket.io": "^4.5.4",
+        "swagger-ui-express": "^4.6.0",
+        "uuid": "9.0.0",
+        "yamljs": "^0.3.0"
+    },
+    "devDependencies": {
+        "node-fetch": "^2.6.6",
+        "prettier": "2.8.3"
+    }
+}
