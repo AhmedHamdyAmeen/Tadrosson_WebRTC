@@ -1,25 +1,28 @@
-// import { Pool } from 'pg';
-// import { POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, DATABASE } from '../config';
+let mysql,
+  { createPool } = require('mysql2/promise');
 
-let { Pool } = require('pg');
-
-let { POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, DATABASE } = require('../environment/env.config');
+let { MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, DATABASE } = require('../environment/env.config');
 
 /** Create db Pool:-
  */
 
-const pool = new Pool({
-    host: POSTGRES_HOST,
-    database: DATABASE,
-    user: POSTGRES_USER,
-    password: POSTGRES_PASSWORD,
-    port: parseInt(POSTGRES_PORT, 10),
+const pool = createPool({
+  host: MYSQL_HOST,
+  database: DATABASE,
+  user: MYSQL_USER,
+  password: MYSQL_PASSWORD,
+  port: parseInt(MYSQL_PORT, 10),
+  connectionLimit: 10,
 });
 
+pool.on('connection', (stream) => {
+  //   console.log(`Someone Connected to the Database Successfully, Stream: `, stream);
+  console.log(`Someone Connected to the Database Successfully`);
+});
 /** Listen on the Error:
  */
 pool.on('error', (err) => {
-    console.log(err.message);
+  console.log(err.message);
 });
 
 // export default pool;

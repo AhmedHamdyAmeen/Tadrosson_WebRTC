@@ -59,6 +59,8 @@ const log = new Logs('server');
  * * Dependencies:
  */
 
+// const mysql = require('mysql2');
+
 const session = require('express-session');
 const flash = require('express-flash');
 const passport = require('passport');
@@ -71,6 +73,8 @@ const userModel = new UserModel();
 initializePassport(passport); // use Passport authentication checker
 const isAuthenticated = require('./middleware/auth.middleware');
 
+// const middleware = require('./middleware/middleware'); //! error
+
 //#region
 const domain = process.env.HOST || 'localhost';
 const isHttps = process.env.HTTPS == 'true';
@@ -80,22 +84,22 @@ const host = `http${isHttps ? 's' : ''}://${domain}:${port}`;
 let io, server;
 
 if (isHttps) {
-    const fs = require('fs');
-    const options = {
-        key: fs.readFileSync(path.join(__dirname, '../ssl/key.pem'), 'utf-8'),
-        cert: fs.readFileSync(path.join(__dirname, '../ssl/cert.pem'), 'utf-8'),
-    };
-    server = https.createServer(options, app);
+  const fs = require('fs');
+  const options = {
+    key: fs.readFileSync(path.join(__dirname, '../ssl/key.pem'), 'utf-8'),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/cert.pem'), 'utf-8'),
+  };
+  server = https.createServer(options, app);
 } else {
-    server = http.createServer(app);
+  server = http.createServer(app);
 }
 
 /*  
     Set maxHttpBufferSize from 1e6 (1MB) to 1e7 (10MB)
 */
 io = new Server({
-    maxHttpBufferSize: 1e7,
-    transports: ['websocket'],
+  maxHttpBufferSize: 1e7,
+  transports: ['websocket'],
 }).listen(server);
 
 // console.log(io);
@@ -145,39 +149,39 @@ const bodyParser = require('body-parser');
 
 // Setup sentry client
 if (sentryEnabled) {
-    Sentry.init({
-        dsn: sentryDSN,
-        integrations: [
-            new CaptureConsole({
-                // array of methods that should be captured
-                // defaults to ['log', 'info', 'warn', 'error', 'debug', 'assert']
-                levels: ['warn', 'error'],
-            }),
-        ],
-        // Set tracesSampleRate to 1.0 to capture 100%
-        // of transactions for performance monitoring.
-        // We recommend adjusting this value in production
-        tracesSampleRate: sentryTracesSampleRate,
-    });
+  Sentry.init({
+    dsn: sentryDSN,
+    integrations: [
+      new CaptureConsole({
+        // array of methods that should be captured
+        // defaults to ['log', 'info', 'warn', 'error', 'debug', 'assert']
+        levels: ['warn', 'error'],
+      }),
+    ],
+    // Set tracesSampleRate to 1.0 to capture 100%
+    // of transactions for performance monitoring.
+    // We recommend adjusting this value in production
+    tracesSampleRate: sentryTracesSampleRate,
+  });
 }
 
 // directory
 const dir = {
-    public: path.join(__dirname, '../../', 'public'),
+  public: path.join(__dirname, '../../', 'public'),
 };
 // html views
 const views = {
-    login: path.join(__dirname, '../../', 'public/views/login.ejs'),
-    register: path.join(__dirname, '../../', 'public/views/register.ejs'),
+  login: path.join(__dirname, '../../', 'public/views/login.ejs'),
+  register: path.join(__dirname, '../../', 'public/views/register.ejs'),
 
-    about: path.join(__dirname, '../../', 'public/views/about.html'),
-    client: path.join(__dirname, '../../', 'public/views/client.html'),
-    landing: path.join(__dirname, '../../', 'public/views/landing.html'),
-    newCall: path.join(__dirname, '../../', 'public/views/newcall.html'),
-    notFound: path.join(__dirname, '../../', 'public/views/404.html'),
-    permission: path.join(__dirname, '../../', 'public/views/permission.html'),
-    privacy: path.join(__dirname, '../../', 'public/views/privacy.html'),
-    stunTurn: path.join(__dirname, '../../', 'public/views/testStunTurn.html'),
+  about: path.join(__dirname, '../../', 'public/views/about.html'),
+  client: path.join(__dirname, '../../', 'public/views/client.html'),
+  landing: path.join(__dirname, '../../', 'public/views/landing.html'),
+  newCall: path.join(__dirname, '../../', 'public/views/newcall.html'),
+  notFound: path.join(__dirname, '../../', 'public/views/404.html'),
+  permission: path.join(__dirname, '../../', 'public/views/permission.html'),
+  privacy: path.join(__dirname, '../../', 'public/views/privacy.html'),
+  stunTurn: path.join(__dirname, '../../', 'public/views/testStunTurn.html'),
 };
 
 let channels = {}; // collect channels
@@ -185,9 +189,33 @@ let sockets = {}; // collect sockets
 let peers = {}; // collect peers info grp by channels
 //#endregion
 
+/**
+ *  Test MySQL Database Connection:
+ */
+
+/**
+const db = mysql.createConnection({
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DB,
+  port: process.env.MYSQL_PORT,
+});
+
+// Connect
+db.connect((err) => {
+  if (err) throw new Error(err);
+
+  console.log('MySQL TEST Connected Successfully');
+});
+ */
+
 /** -------------------- **
  * ^ Middleware:
  */
+app.set('view engine', 'ejs'); // Use the EJS view engine
+
+// middleware(app, cors, compression, express, bodyParser, apiBasePath, flash, session, passport);
 
 app.use(cors()); // Enable All CORS Requests for all origins
 app.use(compression()); // Compress all HTTP responses using GZip
@@ -195,20 +223,19 @@ app.use(express.json()); // Api parse body data as json
 app.use(express.static(dir.public)); // Use all static files from the public folder
 app.use(bodyParser.urlencoded({ extended: true })); // Need for Slack API body parser
 app.use(apiBasePath + '/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument)); // api docs
-app.set('view engine', 'ejs'); // Use the EJS view engine
 
 // Provides session in express
 app.use(
-    session({
-        secret: process.env.SESSION_SECRET_TOKEN ?? 'Default_Session_Secrete',
-        // Should we re-save our session variables if nothing has changed.
-        resave: false,
-        // Save empty value if there is no value.
-        saveUninitialized: false,
-    }),
+  session({
+    secret: process.env.SESSION_SECRET_TOKEN ?? 'Default_Session_Secrete',
+    // Should we re-save our session variables if nothing has changed.
+    resave: false,
+    // Save empty value if there is no value.
+    saveUninitialized: false,
+  }),
 );
-app.use(flash());
-// Standard dynamic range
+
+app.use(flash()); // Show Messages for Client User
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -219,149 +246,151 @@ app.use(passport.session());
 
 // all start from here
 app.get('*', function (next) {
-    next();
+  next();
 });
 
 // Remove trailing slashes in url handle bad requests
 app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError || err.status === 400 || 'body' in err) {
-        log.error('Request Error', {
-            header: req.headers,
-            body: req.body,
-            error: err.message,
-        });
-        return res.status(400).send({ status: 404, message: err.message }); // Bad request
-    }
-    if (req.path.substr(-1) === '/' && req.path.length > 1) {
-        let query = req.url.slice(req.path.length);
-        res.redirect(301, req.path.slice(0, -1) + query);
-    } else {
-        next();
-    }
+  if (err instanceof SyntaxError || err.status === 400 || 'body' in err) {
+    log.error('Request Error', {
+      header: req.headers,
+      body: req.body,
+      error: err.message,
+    });
+    return res.status(400).send({ status: 404, message: err.message }); // Bad request
+  }
+  if (req.path.substr(-1) === '/' && req.path.length > 1) {
+    let query = req.url.slice(req.path.length);
+    res.redirect(301, req.path.slice(0, -1) + query);
+  } else {
+    next();
+  }
 });
 
 // main page
 app.get(['/'], (req, res) => {
-    // res.sendFile(views.landing);
-    res.render(views.login, { name: 'Ahmed Amin' });
+  // res.sendFile(views.landing);
+  res.render(views.login, { name: 'Ahmed Amin' });
 });
 
 app.post(
-    ['/'],
-    passport.authenticate('local', {
-        successRedirect: '/newcall',
-        failureRedirect: '/',
-        failureFlash: true,
-    }),
+  ['/'],
+  passport.authenticate('local', {
+    successRedirect: '/newcall',
+    failureRedirect: '/',
+    failureFlash: true, // Flash Error in the Failure Cases
+  }),
 );
 
 app.get(['/user/register'], (_req, res) => {
-    res.render(views.register);
+  res.render(views.register);
 });
 
 app.post('/user/register', async (req, res, next) => {
-    let { email, user_name, first_name, last_name, password, password_two } = req.body;
-    // console.log('Registration Request Body: ', { email, user_name, first_name, last_name, password, password_two });
+  let { email, user_name, first_name, last_name, password, password_two, role } = req.body;
+  // console.log('Registration Request Body: ', { email, user_name, first_name, last_name, password, password_two });
 
-    // Request Validation
-    let errors = [];
-    if (!email || !user_name || !first_name || !last_name || !password || !password_two) {
-        errors.push({ message: 'Please Enter all Fields!' });
-    }
+  // Request Validation
+  let errors = [];
+  if (!email || !user_name || !first_name || !last_name || !password || !password_two || !role) {
+    errors.push({ message: 'Please Enter all Fields!' });
+  }
 
-    if (password.length < 6) {
-        errors.push({ message: 'Password should be at least 6 characters' });
-    }
+  if (password.length < 6) {
+    errors.push({ message: 'Password should be at least 6 characters' });
+  }
 
-    if (password !== password_two) {
-        errors.push({ message: 'Passwords don not match' });
-    }
+  if (password !== password_two) {
+    errors.push({ message: 'Passwords don not match' });
+  }
 
-    if (errors.length > 0) {
-        // Form Validation failed
-        res.render(views.register, { errors });
+  if (errors.length > 0) {
+    // Form Validation failed
+    res.render(views.register, { errors });
+  } else {
+    // Form Validation passed
+    // let hashedPassword = hashPassword(`${password}${process.env.BCRYPT_PASSWORD}`);
+    let hashedPassword = hashPassword(password);
+    // console.log(hashedPassword);
+
+    let user = await userModel.findUserBy('email', email);
+    console.log('User: ', user);
+
+    if (user.length > 0) {
+      // User Found in DB
+      console.log('User: ', user);
+      errors.push({ message: `This User: ${user.user_name} is already registered!` });
+
+      // if the user isn't found in the database
+      res.render(views.register, { errors });
     } else {
-        // Form Validation passed
-        let hashedPassword = hashPassword(`${password}${process.env.BCRYPT_PASSWORD}`);
-        // console.log(hashedPassword);
+      // User not found in DB
+      let user = await userModel.createUser(email, user_name, first_name, last_name, hashedPassword, role);
 
-        let user = await userModel.findUserBy('email', email);
-        console.log(user);
+      console.log('<===================', user);
+      if (user) {
+        console.log('Registered User: ', user);
+        req.flash('success_msg', `User: ${user_name}, email: ${email} Registered Successfully. Kindly login.`);
 
-        if (user) {
-            // User Found in DB
-            console.log('User: ', user);
-            errors.push({ message: `This User: ${user.user_name} is already registered!` });
-
-            // if the user isn't found in the database
-            res.render(views.register, { errors });
-        } else {
-            // User not found in DB
-            let user = await userModel.createUser(email, user_name, first_name, last_name, hashedPassword);
-
-            if (user) {
-                console.log('Registered User: ', user);
-                req.flash('success_msg', `User: ${user_name}, email: ${email} Registered Successfully. Kindly login.`);
-
-                res.redirect('/');
-            }
-        }
-
-        //  Insert into users (id, email, user_name, first_name,last_name,password ) values (uuid_generate_v4(), 'Ahmed.h.Ameen1@gmail.com', 'Ahmed Ameen', 'Ahmed','Ameen','123456');
-
-        next();
+        res.redirect('/');
+      }
     }
+
+    //  Insert into users (id, email, user_name, first_name,last_name,password ) values (uuid_generate_v4(), 'Ahmed.h.Ameen1@gmail.com', 'Ahmed Ameen', 'Ahmed','Ameen','123456');
+
+    next();
+  }
 });
 
 app.get('/user/logout', (req, res) => {
-    req.logOut((error) => console.log(error));
-    req.flash('success_msg', 'You have logged out! You Can login again.');
+  req.logOut((error) => console.log(error));
+  req.flash('success_msg', 'You have logged out! You Can login again.');
 
-    res.render(views.login);
-    // res.redirect('/');
+  res.render(views.login);
+  // res.redirect('/');
 });
 
 // set new room name and join
 app.get(['/newcall'], isAuthenticated, (_req, res) => {
-    res.sendFile(views.newCall);
+  res.sendFile(views.newCall);
 });
 
 // no room name specified to join
 app.get('/join/', isAuthenticated, (req, res) => {
-    if (Object.keys(req.query).length > 0) {
-        log.debug('Request Query', req.query);
-        /* 
+  if (Object.keys(req.query).length > 0) {
+    log.debug('Request Query', req.query);
+    /* 
             http://localhost:3000/join?room=test&name=Tadrosoon&audio=1&video=1&screen=1&notify=1
             https://p2p.Tadrosoon.com/join?room=test&name=Tadrosoon&audio=1&video=1&screen=1&notify=1
             https://Tadrosoon.up.railway.app/join?room=test&name=Tadrosoon&audio=1&video=1&screen=1&notify=1
             https://Tadrosoon.herokuapp.com/join?room=test&name=Tadrosoon&audio=1&video=1&screen=1&notify=1
         */
-        const { room, name, audio, video, screen, notify } = req.query;
-        // all the params are mandatory for the direct room join
-        if (room && name && audio && video && screen && notify) {
-            return res.sendFile(views.client);
-        }
+    const { room, name, audio, video, screen, notify } = req.query;
+    // all the params are mandatory for the direct room join
+    if (room && name && audio && video && screen && notify) {
+      return res.sendFile(views.client);
     }
-    res.redirect('/newcall');
+  }
+  res.redirect('/newcall');
 });
 
 // Join Room *
 app.get('/join/*', isAuthenticated, (_req, res) => {
-    res.sendFile(views.client);
+  res.sendFile(views.client);
 });
 
 // test Stun and Turn connections
 app.get(['/test'], (req, res) => {
-    if (Object.keys(req.query).length > 0) {
-        log.debug('Request Query', req.query);
-    }
-    /*
+  if (Object.keys(req.query).length > 0) {
+    log.debug('Request Query', req.query);
+  }
+  /*
       http://localhost:3000/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
       https://p2p.Tadrosoon.com//test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
       https://Tadrosoon.up.railway.app/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
       https://Tadrosoon.herokuapp.com/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
   */
-    res.sendFile(views.stunTurn);
+  res.sendFile(views.stunTurn);
 });
 
 /**
@@ -371,27 +400,27 @@ app.get(['/test'], (req, res) => {
 
 // request meeting room endpoint
 app.post([apiBasePath + '/meeting'], (req, res) => {
-    // check if user was authorized for the api call
-    let authorization = req.headers.authorization;
-    if (authorization != api_key_secret) {
-        log.debug('Tadrosoon get meeting - Unauthorized', {
-            header: req.headers,
-            body: req.body,
-        });
-        return res.status(403).json({ error: 'Unauthorized!' });
-    }
-    // setup meeting URL
-    let host = req.headers.host;
-    let meetingURL = getMeetingURL(host);
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ meeting: meetingURL }));
-
-    // log.debug the output if all done
-    log.debug('Tadrosoon get meeting - Authorized', {
-        header: req.headers,
-        body: req.body,
-        meeting: meetingURL,
+  // check if user was authorized for the api call
+  let authorization = req.headers.authorization;
+  if (authorization != api_key_secret) {
+    log.debug('Tadrosoon get meeting - Unauthorized', {
+      header: req.headers,
+      body: req.body,
     });
+    return res.status(403).json({ error: 'Unauthorized!' });
+  }
+  // setup meeting URL
+  let host = req.headers.host;
+  let meetingURL = getMeetingURL(host);
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ meeting: meetingURL }));
+
+  // log.debug the output if all done
+  log.debug('Tadrosoon get meeting - Authorized', {
+    header: req.headers,
+    body: req.body,
+    meeting: meetingURL,
+  });
 });
 
 /*
@@ -401,33 +430,33 @@ app.post([apiBasePath + '/meeting'], (req, res) => {
 
 //Slack request meeting room endpoint
 app.post('/slack', (req, res) => {
-    if (!slackEnabled) return res.end('`Under maintenance` - Please check back soon.');
+  if (!slackEnabled) return res.end('`Under maintenance` - Please check back soon.');
 
-    log.debug('Slack', req.headers);
+  log.debug('Slack', req.headers);
 
-    if (!slackSigningSecret) return res.end('`Slack Signing Secret is empty!`');
+  if (!slackSigningSecret) return res.end('`Slack Signing Secret is empty!`');
 
-    let slackSignature = req.headers['x-slack-signature'];
-    let requestBody = qS.stringify(req.body, { format: 'RFC1738' });
-    let timeStamp = req.headers['x-slack-request-timestamp'];
-    let time = Math.floor(new Date().getTime() / 1000);
+  let slackSignature = req.headers['x-slack-signature'];
+  let requestBody = qS.stringify(req.body, { format: 'RFC1738' });
+  let timeStamp = req.headers['x-slack-request-timestamp'];
+  let time = Math.floor(new Date().getTime() / 1000);
 
-    // The request timestamp is more than five minutes from local time. It could be a replay attack, so let's ignore it.
-    if (Math.abs(time - timeStamp) > 300) return res.end('`Wrong timestamp` - Ignore this request.');
+  // The request timestamp is more than five minutes from local time. It could be a replay attack, so let's ignore it.
+  if (Math.abs(time - timeStamp) > 300) return res.end('`Wrong timestamp` - Ignore this request.');
 
-    // Get Signature to compare it later
-    let sigBaseString = 'v0:' + timeStamp + ':' + requestBody;
-    let mySignature = 'v0=' + CryptoJS.HmacSHA256(sigBaseString, slackSigningSecret);
+  // Get Signature to compare it later
+  let sigBaseString = 'v0:' + timeStamp + ':' + requestBody;
+  let mySignature = 'v0=' + CryptoJS.HmacSHA256(sigBaseString, slackSigningSecret);
 
-    // Valid Signature return a meetingURL
-    if (mySignature == slackSignature) {
-        let host = req.headers.host;
-        let meetingURL = getMeetingURL(host);
-        log.debug('Slack', { meeting: meetingURL });
-        return res.end(meetingURL);
-    }
-    // Something wrong
-    return res.end('`Wrong signature` - Verification failed!');
+  // Valid Signature return a meetingURL
+  if (mySignature == slackSignature) {
+    let host = req.headers.host;
+    let meetingURL = getMeetingURL(host);
+    log.debug('Slack', { meeting: meetingURL });
+    return res.end(meetingURL);
+  }
+  // Something wrong
+  return res.end('`Wrong signature` - Verification failed!');
 });
 
 /**
@@ -435,14 +464,14 @@ app.post('/slack', (req, res) => {
  * @returns  entrypoint / Room URL for your meeting.
  */
 function getMeetingURL(host) {
-    return 'http' + (host.includes('localhost') ? '' : 's') + '://' + host + '/join/' + uuidV4();
+  return 'http' + (host.includes('localhost') ? '' : 's') + '://' + host + '/join/' + uuidV4();
 }
 
 // end of Tadrosoon API v1
 
 // not match any of page before, so 404 not found
 app.get('*', function (req, res) {
-    res.sendFile(views.notFound);
+  res.sendFile(views.notFound);
 });
 
 /**
@@ -462,19 +491,19 @@ const iceServers = [];
 iceServers.push({ urls: stun });
 
 if (turnEnabled) {
-    iceServers.push({
-        urls: turnUrls,
-        username: turnUsername,
-        credential: turnCredential,
-    });
+  iceServers.push({
+    urls: turnUrls,
+    username: turnUsername,
+    credential: turnCredential,
+  });
 } else {
-    // As backup if not configured, please configure your own in the .env file
-    // https://www.metered.ca/tools/openrelay/
-    iceServers.push({
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-    });
+  // As backup if not configured, please configure your own in the .env file
+  // https://www.metered.ca/tools/openrelay/
+  iceServers.push({
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  });
 }
 
 // Test Stun and Turn connection with query params
@@ -486,46 +515,46 @@ const testStunTurn = host + '/test';
  * https://ngrok.com
  */
 async function ngrokStart() {
-    try {
-        await ngrok.authtoken(ngrokAuthToken);
-        await ngrok.connect(port);
-        let api = ngrok.getApi();
-        let data = await api.listTunnels();
-        let pu0 = data.tunnels[0].public_url;
-        let pu1 = data.tunnels[1].public_url;
-        let tunnelHttps = pu0.startsWith('https') ? pu0 : pu1;
-        // server settings
-        log.debug('settings', {
-            iceServers: iceServers,
-            ngrok: {
-                ngrok_enabled: ngrokEnabled,
-                ngrok_token: ngrokAuthToken,
-            },
-            server: host,
-            server_tunnel: tunnelHttps,
-            test_ice_servers: testStunTurn,
-            api_docs: api_docs,
-            api_key_secret: api_key_secret,
-            use_self_signed_certificate: isHttps,
-            own_turn_enabled: turnEnabled,
-            slack_enabled: slackEnabled,
-            sentry_enabled: sentryEnabled,
-            survey_enabled: surveyEnabled,
-            survey_url: surveyURL,
-            node_version: process.versions.node,
-        });
-    } catch (err) {
-        log.warn('[Error] ngrokStart', err.body);
-        process.exit(1);
-    }
+  try {
+    await ngrok.authtoken(ngrokAuthToken);
+    await ngrok.connect(port);
+    let api = ngrok.getApi();
+    let data = await api.listTunnels();
+    let pu0 = data.tunnels[0].public_url;
+    let pu1 = data.tunnels[1].public_url;
+    let tunnelHttps = pu0.startsWith('https') ? pu0 : pu1;
+    // server settings
+    log.debug('settings', {
+      iceServers: iceServers,
+      ngrok: {
+        ngrok_enabled: ngrokEnabled,
+        ngrok_token: ngrokAuthToken,
+      },
+      server: host,
+      server_tunnel: tunnelHttps,
+      test_ice_servers: testStunTurn,
+      api_docs: api_docs,
+      api_key_secret: api_key_secret,
+      use_self_signed_certificate: isHttps,
+      own_turn_enabled: turnEnabled,
+      slack_enabled: slackEnabled,
+      sentry_enabled: sentryEnabled,
+      survey_enabled: surveyEnabled,
+      survey_url: surveyURL,
+      node_version: process.versions.node,
+    });
+  } catch (err) {
+    log.warn('[Error] ngrokStart', err.body);
+    process.exit(1);
+  }
 }
 
 /**
  * Start Local Server with ngrok https tunnel (optional)
  */
 server.listen(port, null, () => {
-    log.debug(
-        `%c
+  log.debug(
+    `%c
 
 	███████╗██╗ ██████╗ ███╗   ██╗      ███████╗███████╗██████╗ ██╗   ██╗███████╗██████╗ 
 	██╔════╝██║██╔════╝ ████╗  ██║      ██╔════╝██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗
@@ -535,29 +564,29 @@ server.listen(port, null, () => {
 	╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝      ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝ started...
 
 	`,
-        'font-family:monospace',
-    );
+    'font-family:monospace',
+  );
 
-    // https tunnel
-    if (ngrokEnabled && isHttps === false) {
-        ngrokStart();
-    } else {
-        // server settings
-        log.debug('settings', {
-            iceServers: iceServers,
-            server: host,
-            test_ice_servers: testStunTurn,
-            api_docs: api_docs,
-            api_key_secret: api_key_secret,
-            use_self_signed_certificate: isHttps,
-            own_turn_enabled: turnEnabled,
-            slack_enabled: slackEnabled,
-            sentry_enabled: sentryEnabled,
-            survey_enabled: surveyEnabled,
-            survey_url: surveyURL,
-            node_version: process.versions.node,
-        });
-    }
+  // https tunnel
+  if (ngrokEnabled && isHttps === false) {
+    ngrokStart();
+  } else {
+    // server settings
+    log.debug('settings', {
+      iceServers: iceServers,
+      server: host,
+      test_ice_servers: testStunTurn,
+      api_docs: api_docs,
+      api_key_secret: api_key_secret,
+      use_self_signed_certificate: isHttps,
+      own_turn_enabled: turnEnabled,
+      slack_enabled: slackEnabled,
+      sentry_enabled: sentryEnabled,
+      survey_enabled: surveyEnabled,
+      survey_url: surveyURL,
+      node_version: process.versions.node,
+    });
+  }
 });
 
 /**
@@ -572,503 +601,500 @@ server.listen(port, null, () => {
  * the peer connection and will be in streaming audio/video between eachother.
  */
 io.sockets.on('connect', async (socket) => {
-    log.debug('[' + socket.id + '] connection accepted', { host: socket.handshake.headers.host.split(':')[0] });
+  log.debug('[' + socket.id + '] connection accepted', { host: socket.handshake.headers.host.split(':')[0] });
 
-    socket.channels = {};
-    sockets[socket.id] = socket;
+  socket.channels = {};
+  sockets[socket.id] = socket;
 
-    const transport = socket.conn.transport.name; // in most cases, "polling"
-    log.debug('[' + socket.id + '] Connection transport', transport);
+  const transport = socket.conn.transport.name; // in most cases, "polling"
+  log.debug('[' + socket.id + '] Connection transport', transport);
 
-    /**
-     * Check upgrade transport
-     */
-    socket.conn.on('upgrade', () => {
-        const upgradedTransport = socket.conn.transport.name; // in most cases, "websocket"
-        log.debug('[' + socket.id + '] Connection upgraded transport', upgradedTransport);
+  /**
+   * Check upgrade transport
+   */
+  socket.conn.on('upgrade', () => {
+    const upgradedTransport = socket.conn.transport.name; // in most cases, "websocket"
+    log.debug('[' + socket.id + '] Connection upgraded transport', upgradedTransport);
+  });
+
+  /**
+   * On peer diconnected
+   */
+  socket.on('disconnect', async (reason) => {
+    for (let channel in socket.channels) {
+      await removePeerFrom(channel);
+    }
+    log.debug('[' + socket.id + '] disconnected', { reason: reason });
+    delete sockets[socket.id];
+  });
+
+  /**
+   * On peer join
+   */
+  socket.on('join', async (config) => {
+    // log.debug('Join room', config);
+    log.debug('[' + socket.id + '] join ', config);
+
+    let channel = config.channel;
+    let channel_password = config.channel_password;
+    let peer_name = config.peer_name;
+    let peer_video = config.peer_video;
+    let peer_audio = config.peer_audio;
+    let peer_video_status = config.peer_video_status;
+    let peer_audio_status = config.peer_audio_status;
+    let peer_screen_status = config.peer_screen_status;
+    let peer_hand_status = config.peer_hand_status;
+    let peer_rec_status = config.peer_rec_status;
+    let peer_privacy_status = config.peer_privacy_status;
+
+    if (channel in socket.channels) {
+      return log.debug('[' + socket.id + '] [Warning] already joined', channel);
+    }
+    // no channel aka room in channels init
+    if (!(channel in channels)) channels[channel] = {};
+
+    // no channel aka room in peers init
+    if (!(channel in peers)) peers[channel] = {};
+
+    // room locked by the participants can't join
+    if (peers[channel]['lock'] === true && peers[channel]['password'] != channel_password) {
+      log.debug('[' + socket.id + '] [Warning] Room Is Locked', channel);
+      return socket.emit('roomIsLocked');
+    }
+
+    // collect peers info grp by channels
+    peers[channel][socket.id] = {
+      peer_name: peer_name,
+      peer_video: peer_video,
+      peer_audio: peer_audio,
+      peer_video_status: peer_video_status,
+      peer_audio_status: peer_audio_status,
+      peer_screen_status: peer_screen_status,
+      peer_hand_status: peer_hand_status,
+      peer_rec_status: peer_rec_status,
+      peer_privacy_status: peer_privacy_status,
+    };
+    log.debug('[Join] - connected peers grp by roomId', peers);
+
+    await addPeerTo(channel);
+
+    channels[channel][socket.id] = socket;
+    socket.channels[channel] = channel;
+
+    // Send some server info to joined peer
+    await sendToPeer(socket.id, sockets, 'serverInfo', {
+      peers_count: Object.keys(peers[channel]).length,
+      survey: {
+        active: surveyEnabled,
+        url: surveyURL,
+      },
+    });
+  });
+
+  /**
+   * Relay ICE to peers
+   */
+  socket.on('relayICE', async (config) => {
+    let peer_id = config.peer_id;
+    let ice_candidate = config.ice_candidate;
+
+    // log.debug('[' + socket.id + '] relay ICE-candidate to [' + peer_id + '] ', {
+    //     address: config.ice_candidate,
+    // });
+
+    await sendToPeer(peer_id, sockets, 'iceCandidate', {
+      peer_id: socket.id,
+      ice_candidate: ice_candidate,
+    });
+  });
+
+  /**
+   * Relay SDP to peers
+   */
+  socket.on('relaySDP', async (config) => {
+    let peer_id = config.peer_id;
+    let session_description = config.session_description;
+
+    log.debug('[' + socket.id + '] relay SessionDescription to [' + peer_id + '] ', {
+      type: session_description.type,
     });
 
-    /**
-     * On peer diconnected
-     */
-    socket.on('disconnect', async (reason) => {
-        for (let channel in socket.channels) {
-            await removePeerFrom(channel);
-        }
-        log.debug('[' + socket.id + '] disconnected', { reason: reason });
-        delete sockets[socket.id];
+    await sendToPeer(peer_id, sockets, 'sessionDescription', {
+      peer_id: socket.id,
+      session_description: session_description,
     });
+  });
 
-    /**
-     * On peer join
-     */
-    socket.on('join', async (config) => {
-        // log.debug('Join room', config);
-        log.debug('[' + socket.id + '] join ', config);
-
-        let channel = config.channel;
-        let channel_password = config.channel_password;
-        let peer_name = config.peer_name;
-        let peer_video = config.peer_video;
-        let peer_audio = config.peer_audio;
-        let peer_video_status = config.peer_video_status;
-        let peer_audio_status = config.peer_audio_status;
-        let peer_screen_status = config.peer_screen_status;
-        let peer_hand_status = config.peer_hand_status;
-        let peer_rec_status = config.peer_rec_status;
-        let peer_privacy_status = config.peer_privacy_status;
-
-        if (channel in socket.channels) {
-            return log.debug('[' + socket.id + '] [Warning] already joined', channel);
-        }
-        // no channel aka room in channels init
-        if (!(channel in channels)) channels[channel] = {};
-
-        // no channel aka room in peers init
-        if (!(channel in peers)) peers[channel] = {};
-
-        // room locked by the participants can't join
-        if (peers[channel]['lock'] === true && peers[channel]['password'] != channel_password) {
-            log.debug('[' + socket.id + '] [Warning] Room Is Locked', channel);
-            return socket.emit('roomIsLocked');
-        }
-
-        // collect peers info grp by channels
-        peers[channel][socket.id] = {
+  /**
+   * Handle Room action
+   */
+  socket.on('roomAction', async (config) => {
+    //log.debug('[' + socket.id + '] Room action:', config);
+    let room_is_locked = false;
+    let room_id = config.room_id;
+    let peer_name = config.peer_name;
+    let password = config.password;
+    let action = config.action;
+    //
+    try {
+      switch (action) {
+        case 'lock':
+          peers[room_id]['lock'] = true;
+          peers[room_id]['password'] = password;
+          await sendToRoom(room_id, socket.id, 'roomAction', {
             peer_name: peer_name,
-            peer_video: peer_video,
-            peer_audio: peer_audio,
-            peer_video_status: peer_video_status,
-            peer_audio_status: peer_audio_status,
-            peer_screen_status: peer_screen_status,
-            peer_hand_status: peer_hand_status,
-            peer_rec_status: peer_rec_status,
-            peer_privacy_status: peer_privacy_status,
-        };
-        log.debug('[Join] - connected peers grp by roomId', peers);
-
-        await addPeerTo(channel);
-
-        channels[channel][socket.id] = socket;
-        socket.channels[channel] = channel;
-
-        // Send some server info to joined peer
-        await sendToPeer(socket.id, sockets, 'serverInfo', {
-            peers_count: Object.keys(peers[channel]).length,
-            survey: {
-                active: surveyEnabled,
-                url: surveyURL,
-            },
-        });
-    });
-
-    /**
-     * Relay ICE to peers
-     */
-    socket.on('relayICE', async (config) => {
-        let peer_id = config.peer_id;
-        let ice_candidate = config.ice_candidate;
-
-        // log.debug('[' + socket.id + '] relay ICE-candidate to [' + peer_id + '] ', {
-        //     address: config.ice_candidate,
-        // });
-
-        await sendToPeer(peer_id, sockets, 'iceCandidate', {
-            peer_id: socket.id,
-            ice_candidate: ice_candidate,
-        });
-    });
-
-    /**
-     * Relay SDP to peers
-     */
-    socket.on('relaySDP', async (config) => {
-        let peer_id = config.peer_id;
-        let session_description = config.session_description;
-
-        log.debug('[' + socket.id + '] relay SessionDescription to [' + peer_id + '] ', {
-            type: session_description.type,
-        });
-
-        await sendToPeer(peer_id, sockets, 'sessionDescription', {
-            peer_id: socket.id,
-            session_description: session_description,
-        });
-    });
-
-    /**
-     * Handle Room action
-     */
-    socket.on('roomAction', async (config) => {
-        //log.debug('[' + socket.id + '] Room action:', config);
-        let room_is_locked = false;
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let password = config.password;
-        let action = config.action;
-        //
-        try {
-            switch (action) {
-                case 'lock':
-                    peers[room_id]['lock'] = true;
-                    peers[room_id]['password'] = password;
-                    await sendToRoom(room_id, socket.id, 'roomAction', {
-                        peer_name: peer_name,
-                        action: action,
-                    });
-                    room_is_locked = true;
-                    break;
-                case 'unlock':
-                    delete peers[room_id]['lock'];
-                    delete peers[room_id]['password'];
-                    await sendToRoom(room_id, socket.id, 'roomAction', {
-                        peer_name: peer_name,
-                        action: action,
-                    });
-                    break;
-                case 'checkPassword':
-                    let config = {
-                        peer_name: peer_name,
-                        action: action,
-                        password: password == peers[room_id]['password'] ? 'OK' : 'KO',
-                    };
-                    await sendToPeer(socket.id, sockets, 'roomAction', config);
-                    break;
-            }
-        } catch (err) {
-            log.error('Room action', toJson(err));
-        }
-        log.debug('[' + socket.id + '] Room ' + room_id, { locked: room_is_locked, password: password });
-    });
-
-    /**
-     * Relay NAME to peers
-     */
-    socket.on('peerName', async (config) => {
-        // log.debug('Peer name', config);
-        let room_id = config.room_id;
-        let peer_name_old = config.peer_name_old;
-        let peer_name_new = config.peer_name_new;
-        let peer_id_to_update = null;
-
-        for (let peer_id in peers[room_id]) {
-            if (peers[room_id][peer_id]['peer_name'] == peer_name_old) {
-                peers[room_id][peer_id]['peer_name'] = peer_name_new;
-                peer_id_to_update = peer_id;
-            }
-        }
-
-        if (peer_id_to_update) {
-            log.debug('[' + socket.id + '] emit peerName to [room_id: ' + room_id + ']', {
-                peer_id: peer_id_to_update,
-                peer_name: peer_name_new,
-            });
-
-            await sendToRoom(room_id, socket.id, 'peerName', {
-                peer_id: peer_id_to_update,
-                peer_name: peer_name_new,
-            });
-        }
-    });
-
-    /**
-     * Relay Audio Video Hand ... Status to peers
-     */
-    socket.on('peerStatus', async (config) => {
-        // log.debug('Peer status', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let element = config.element;
-        let status = config.status;
-
-        try {
-            for (let peer_id in peers[room_id]) {
-                if (peers[room_id][peer_id]['peer_name'] == peer_name) {
-                    switch (element) {
-                        case 'video':
-                            peers[room_id][peer_id]['peer_video_status'] = status;
-                            break;
-                        case 'audio':
-                            peers[room_id][peer_id]['peer_audio_status'] = status;
-                            break;
-                        case 'screen':
-                            peers[room_id][peer_id]['peer_screen_status'] = status;
-                            break;
-                        case 'hand':
-                            peers[room_id][peer_id]['peer_hand_status'] = status;
-                            break;
-                        case 'rec':
-                            peers[room_id][peer_id]['peer_rec_status'] = status;
-                            break;
-                        case 'privacy':
-                            peers[room_id][peer_id]['peer_privacy_status'] = status;
-                            break;
-                    }
-                }
-            }
-
-            log.debug('[' + socket.id + '] emit peerStatus to [room_id: ' + room_id + ']', {
-                peer_id: socket.id,
-                element: element,
-                status: status,
-            });
-
-            await sendToRoom(room_id, socket.id, 'peerStatus', {
-                peer_id: socket.id,
-                peer_name: peer_name,
-                element: element,
-                status: status,
-            });
-        } catch (err) {
-            log.error('Peer Status', toJson(err));
-        }
-    });
-
-    /**
-     * Relay actions to peers or specific peer in the same room
-     */
-    socket.on('peerAction', async (config) => {
-        // log.debug('Peer action', config);
-        let room_id = config.room_id;
-        let peer_id = config.peer_id;
-        let peer_name = config.peer_name;
-        let peer_use_video = config.peer_use_video;
-        let peer_action = config.peer_action;
-        let send_to_all = config.send_to_all;
-
-        if (send_to_all) {
-            log.debug('[' + socket.id + '] emit peerAction to [room_id: ' + room_id + ']', {
-                peer_id: socket.id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
-
-            await sendToRoom(room_id, socket.id, 'peerAction', {
-                peer_id: peer_id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
-        } else {
-            log.debug('[' + socket.id + '] emit peerAction to [' + peer_id + '] from room_id [' + room_id + ']');
-
-            await sendToPeer(peer_id, sockets, 'peerAction', {
-                peer_id: peer_id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
-        }
-    });
-
-    /**
-     * Relay Kick out peer from room
-     */
-    socket.on('kickOut', async (config) => {
-        let room_id = config.room_id;
-        let peer_id = config.peer_id;
-        let peer_name = config.peer_name;
-
-        log.debug('[' + socket.id + '] kick out peer [' + peer_id + '] from room_id [' + room_id + ']');
-
-        await sendToPeer(peer_id, sockets, 'kickOut', {
+            action: action,
+          });
+          room_is_locked = true;
+          break;
+        case 'unlock':
+          delete peers[room_id]['lock'];
+          delete peers[room_id]['password'];
+          await sendToRoom(room_id, socket.id, 'roomAction', {
             peer_name: peer_name,
-        });
-    });
-
-    /**
-     * Relay File info
-     */
-    socket.on('fileInfo', async (config) => {
-        // log.debug('File info', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let peer_id = config.peer_id;
-        let broadcast = config.broadcast;
-        let file = config.file;
-
-        function bytesToSize(bytes) {
-            let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            if (bytes == 0) return '0 Byte';
-            let i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-            return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-        }
-
-        log.debug('[' + socket.id + '] Peer [' + peer_name + '] send file to room_id [' + room_id + ']', {
-            peerName: file.peerName,
-            fileName: file.fileName,
-            fileSize: bytesToSize(file.fileSize),
-            fileType: file.fileType,
-            broadcast: broadcast,
-        });
-
-        if (broadcast) {
-            await sendToRoom(room_id, socket.id, 'fileInfo', config);
-        } else {
-            await sendToPeer(peer_id, sockets, 'fileInfo', config);
-        }
-    });
-
-    /**
-     * Abort file sharing
-     */
-    socket.on('fileAbort', async (config) => {
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-
-        log.debug('[' + socket.id + '] Peer [' + peer_name + '] send fileAbort to room_id [' + room_id + ']');
-        await sendToRoom(room_id, socket.id, 'fileAbort');
-    });
-
-    /**
-     * Relay video player action
-     */
-    socket.on('videoPlayer', async (config) => {
-        // log.debug('Video player', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let video_action = config.video_action;
-        let video_src = config.video_src;
-        let peer_id = config.peer_id;
-
-        let sendConfig = {
+            action: action,
+          });
+          break;
+        case 'checkPassword':
+          let config = {
             peer_name: peer_name,
-            video_action: video_action,
-            video_src: video_src,
-        };
-        let logMe = {
-            peer_id: socket.id,
-            peer_name: peer_name,
-            video_action: video_action,
-            video_src: video_src,
-        };
+            action: action,
+            password: password == peers[room_id]['password'] ? 'OK' : 'KO',
+          };
+          await sendToPeer(socket.id, sockets, 'roomAction', config);
+          break;
+      }
+    } catch (err) {
+      log.error('Room action', toJson(err));
+    }
+    log.debug('[' + socket.id + '] Room ' + room_id, { locked: room_is_locked, password: password });
+  });
 
-        if (peer_id) {
-            log.debug(
-                '[' + socket.id + '] emit videoPlayer to [' + peer_id + '] from room_id [' + room_id + ']',
-                logMe,
-            );
+  /**
+   * Relay NAME to peers
+   */
+  socket.on('peerName', async (config) => {
+    // log.debug('Peer name', config);
+    let room_id = config.room_id;
+    let peer_name_old = config.peer_name_old;
+    let peer_name_new = config.peer_name_new;
+    let peer_id_to_update = null;
 
-            await sendToPeer(peer_id, sockets, 'videoPlayer', sendConfig);
-        } else {
-            log.debug('[' + socket.id + '] emit videoPlayer to [room_id: ' + room_id + ']', logMe);
+    for (let peer_id in peers[room_id]) {
+      if (peers[room_id][peer_id]['peer_name'] == peer_name_old) {
+        peers[room_id][peer_id]['peer_name'] = peer_name_new;
+        peer_id_to_update = peer_id;
+      }
+    }
 
-            await sendToRoom(room_id, socket.id, 'videoPlayer', sendConfig);
+    if (peer_id_to_update) {
+      log.debug('[' + socket.id + '] emit peerName to [room_id: ' + room_id + ']', {
+        peer_id: peer_id_to_update,
+        peer_name: peer_name_new,
+      });
+
+      await sendToRoom(room_id, socket.id, 'peerName', {
+        peer_id: peer_id_to_update,
+        peer_name: peer_name_new,
+      });
+    }
+  });
+
+  /**
+   * Relay Audio Video Hand ... Status to peers
+   */
+  socket.on('peerStatus', async (config) => {
+    // log.debug('Peer status', config);
+    let room_id = config.room_id;
+    let peer_name = config.peer_name;
+    let element = config.element;
+    let status = config.status;
+
+    try {
+      for (let peer_id in peers[room_id]) {
+        if (peers[room_id][peer_id]['peer_name'] == peer_name) {
+          switch (element) {
+            case 'video':
+              peers[room_id][peer_id]['peer_video_status'] = status;
+              break;
+            case 'audio':
+              peers[room_id][peer_id]['peer_audio_status'] = status;
+              break;
+            case 'screen':
+              peers[room_id][peer_id]['peer_screen_status'] = status;
+              break;
+            case 'hand':
+              peers[room_id][peer_id]['peer_hand_status'] = status;
+              break;
+            case 'rec':
+              peers[room_id][peer_id]['peer_rec_status'] = status;
+              break;
+            case 'privacy':
+              peers[room_id][peer_id]['peer_privacy_status'] = status;
+              break;
+          }
         }
+      }
+
+      log.debug('[' + socket.id + '] emit peerStatus to [room_id: ' + room_id + ']', {
+        peer_id: socket.id,
+        element: element,
+        status: status,
+      });
+
+      await sendToRoom(room_id, socket.id, 'peerStatus', {
+        peer_id: socket.id,
+        peer_name: peer_name,
+        element: element,
+        status: status,
+      });
+    } catch (err) {
+      log.error('Peer Status', toJson(err));
+    }
+  });
+
+  /**
+   * Relay actions to peers or specific peer in the same room
+   */
+  socket.on('peerAction', async (config) => {
+    // log.debug('Peer action', config);
+    let room_id = config.room_id;
+    let peer_id = config.peer_id;
+    let peer_name = config.peer_name;
+    let peer_use_video = config.peer_use_video;
+    let peer_action = config.peer_action;
+    let send_to_all = config.send_to_all;
+
+    if (send_to_all) {
+      log.debug('[' + socket.id + '] emit peerAction to [room_id: ' + room_id + ']', {
+        peer_id: socket.id,
+        peer_name: peer_name,
+        peer_action: peer_action,
+        peer_use_video: peer_use_video,
+      });
+
+      await sendToRoom(room_id, socket.id, 'peerAction', {
+        peer_id: peer_id,
+        peer_name: peer_name,
+        peer_action: peer_action,
+        peer_use_video: peer_use_video,
+      });
+    } else {
+      log.debug('[' + socket.id + '] emit peerAction to [' + peer_id + '] from room_id [' + room_id + ']');
+
+      await sendToPeer(peer_id, sockets, 'peerAction', {
+        peer_id: peer_id,
+        peer_name: peer_name,
+        peer_action: peer_action,
+        peer_use_video: peer_use_video,
+      });
+    }
+  });
+
+  /**
+   * Relay Kick out peer from room
+   */
+  socket.on('kickOut', async (config) => {
+    let room_id = config.room_id;
+    let peer_id = config.peer_id;
+    let peer_name = config.peer_name;
+
+    log.debug('[' + socket.id + '] kick out peer [' + peer_id + '] from room_id [' + room_id + ']');
+
+    await sendToPeer(peer_id, sockets, 'kickOut', {
+      peer_name: peer_name,
+    });
+  });
+
+  /**
+   * Relay File info
+   */
+  socket.on('fileInfo', async (config) => {
+    // log.debug('File info', config);
+    let room_id = config.room_id;
+    let peer_name = config.peer_name;
+    let peer_id = config.peer_id;
+    let broadcast = config.broadcast;
+    let file = config.file;
+
+    function bytesToSize(bytes) {
+      let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      if (bytes == 0) return '0 Byte';
+      let i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+      return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+    }
+
+    log.debug('[' + socket.id + '] Peer [' + peer_name + '] send file to room_id [' + room_id + ']', {
+      peerName: file.peerName,
+      fileName: file.fileName,
+      fileSize: bytesToSize(file.fileSize),
+      fileType: file.fileType,
+      broadcast: broadcast,
     });
 
-    /**
-     * Whiteboard actions for all user in the same room
-     */
-    socket.on('wbCanvasToJson', async (config) => {
-        // log.debug('Whiteboard send canvas', config);
-        let room_id = config.room_id;
-        await sendToRoom(room_id, socket.id, 'wbCanvasToJson', config);
-    });
-
-    socket.on('whiteboardAction', async (config) => {
-        log.debug('Whiteboard', config);
-        let room_id = config.room_id;
-        await sendToRoom(room_id, socket.id, 'whiteboardAction', config);
-    });
-
-    /**
-     * Add peers to channel
-     * @param {string} channel room id
-     */
-    async function addPeerTo(channel) {
-        for (let id in channels[channel]) {
-            // offer false
-            await channels[channel][id].emit('addPeer', {
-                peer_id: socket.id,
-                peers: peers[channel],
-                should_create_offer: false,
-                iceServers: iceServers,
-            });
-            // offer true
-            socket.emit('addPeer', {
-                peer_id: id,
-                peers: peers[channel],
-                should_create_offer: true,
-                iceServers: iceServers,
-            });
-            log.debug('[' + socket.id + '] emit addPeer [' + id + ']');
-        }
+    if (broadcast) {
+      await sendToRoom(room_id, socket.id, 'fileInfo', config);
+    } else {
+      await sendToPeer(peer_id, sockets, 'fileInfo', config);
     }
+  });
 
-    /**
-     * Remove peers from channel
-     * @param {string} channel room id
-     */
-    async function removePeerFrom(channel) {
-        if (!(channel in socket.channels)) {
-            return log.debug('[' + socket.id + '] [Warning] not in ', channel);
-        }
-        try {
-            delete socket.channels[channel];
-            delete channels[channel][socket.id];
-            delete peers[channel][socket.id]; // delete peer data from the room
+  /**
+   * Abort file sharing
+   */
+  socket.on('fileAbort', async (config) => {
+    let room_id = config.room_id;
+    let peer_name = config.peer_name;
 
-            switch (Object.keys(peers[channel]).length) {
-                case 0: // last peer disconnected from the room without room lock & password set
-                    delete peers[channel];
-                    break;
-                case 2: // last peer disconnected from the room having room lock & password set
-                    if (peers[channel]['lock'] && peers[channel]['password']) {
-                        delete peers[channel]; // clean lock and password value from the room
-                    }
-                    break;
-            }
-        } catch (err) {
-            log.error('Remove Peer', toJson(err));
-        }
-        log.debug('[removePeerFrom] - connected peers grp by roomId', peers);
+    log.debug('[' + socket.id + '] Peer [' + peer_name + '] send fileAbort to room_id [' + room_id + ']');
+    await sendToRoom(room_id, socket.id, 'fileAbort');
+  });
 
-        for (let id in channels[channel]) {
-            await channels[channel][id].emit('removePeer', { peer_id: socket.id });
-            socket.emit('removePeer', { peer_id: id });
-            log.debug('[' + socket.id + '] emit removePeer [' + id + ']');
-        }
+  /**
+   * Relay video player action
+   */
+  socket.on('videoPlayer', async (config) => {
+    // log.debug('Video player', config);
+    let room_id = config.room_id;
+    let peer_name = config.peer_name;
+    let video_action = config.video_action;
+    let video_src = config.video_src;
+    let peer_id = config.peer_id;
+
+    let sendConfig = {
+      peer_name: peer_name,
+      video_action: video_action,
+      video_src: video_src,
+    };
+    let logMe = {
+      peer_id: socket.id,
+      peer_name: peer_name,
+      video_action: video_action,
+      video_src: video_src,
+    };
+
+    if (peer_id) {
+      log.debug('[' + socket.id + '] emit videoPlayer to [' + peer_id + '] from room_id [' + room_id + ']', logMe);
+
+      await sendToPeer(peer_id, sockets, 'videoPlayer', sendConfig);
+    } else {
+      log.debug('[' + socket.id + '] emit videoPlayer to [room_id: ' + room_id + ']', logMe);
+
+      await sendToRoom(room_id, socket.id, 'videoPlayer', sendConfig);
     }
+  });
 
-    /**
-     * Object to Json
-     * @param {object} data object
-     * @returns {json} indent 4 spaces
-     */
-    function toJson(data) {
-        return JSON.stringify(data, null, 4); // "\t"
-    }
+  /**
+   * Whiteboard actions for all user in the same room
+   */
+  socket.on('wbCanvasToJson', async (config) => {
+    // log.debug('Whiteboard send canvas', config);
+    let room_id = config.room_id;
+    await sendToRoom(room_id, socket.id, 'wbCanvasToJson', config);
+  });
 
-    /**
-     * Send async data to all peers in the same room except yourself
-     * @param {string} room_id id of the room to send data
-     * @param {string} socket_id socket id of peer that send data
-     * @param {string} msg message to send to the peers in the same room
-     * @param {object} config data to send to the peers in the same room
-     */
-    async function sendToRoom(room_id, socket_id, msg, config = {}) {
-        for (let peer_id in channels[room_id]) {
-            // not send data to myself
-            if (peer_id != socket_id) {
-                await channels[room_id][peer_id].emit(msg, config);
-                //console.log('Send to room', { msg: msg, config: config });
-            }
-        }
-    }
+  socket.on('whiteboardAction', async (config) => {
+    log.debug('Whiteboard', config);
+    let room_id = config.room_id;
+    await sendToRoom(room_id, socket.id, 'whiteboardAction', config);
+  });
 
-    /**
-     * Send async data to specified peer
-     * @param {string} peer_id id of the peer to send data
-     * @param {object} sockets all peers connections
-     * @param {string} msg message to send to the peer in the same room
-     * @param {object} config data to send to the peer in the same room
-     */
-    async function sendToPeer(peer_id, sockets, msg, config = {}) {
-        if (peer_id in sockets) {
-            await sockets[peer_id].emit(msg, config);
-            //console.log('Send to peer', { msg: msg, config: config });
-        }
+  /**
+   * Add peers to channel
+   * @param {string} channel room id
+   */
+  async function addPeerTo(channel) {
+    for (let id in channels[channel]) {
+      // offer false
+      await channels[channel][id].emit('addPeer', {
+        peer_id: socket.id,
+        peers: peers[channel],
+        should_create_offer: false,
+        iceServers: iceServers,
+      });
+      // offer true
+      socket.emit('addPeer', {
+        peer_id: id,
+        peers: peers[channel],
+        should_create_offer: true,
+        iceServers: iceServers,
+      });
+      log.debug('[' + socket.id + '] emit addPeer [' + id + ']');
     }
+  }
+
+  /**
+   * Remove peers from channel
+   * @param {string} channel room id
+   */
+  async function removePeerFrom(channel) {
+    if (!(channel in socket.channels)) {
+      return log.debug('[' + socket.id + '] [Warning] not in ', channel);
+    }
+    try {
+      delete socket.channels[channel];
+      delete channels[channel][socket.id];
+      delete peers[channel][socket.id]; // delete peer data from the room
+
+      switch (Object.keys(peers[channel]).length) {
+        case 0: // last peer disconnected from the room without room lock & password set
+          delete peers[channel];
+          break;
+        case 2: // last peer disconnected from the room having room lock & password set
+          if (peers[channel]['lock'] && peers[channel]['password']) {
+            delete peers[channel]; // clean lock and password value from the room
+          }
+          break;
+      }
+    } catch (err) {
+      log.error('Remove Peer', toJson(err));
+    }
+    log.debug('[removePeerFrom] - connected peers grp by roomId', peers);
+
+    for (let id in channels[channel]) {
+      await channels[channel][id].emit('removePeer', { peer_id: socket.id });
+      socket.emit('removePeer', { peer_id: id });
+      log.debug('[' + socket.id + '] emit removePeer [' + id + ']');
+    }
+  }
+
+  /**
+   * Object to Json
+   * @param {object} data object
+   * @returns {json} indent 4 spaces
+   */
+  function toJson(data) {
+    return JSON.stringify(data, null, 4); // "\t"
+  }
+
+  /**
+   * Send async data to all peers in the same room except yourself
+   * @param {string} room_id id of the room to send data
+   * @param {string} socket_id socket id of peer that send data
+   * @param {string} msg message to send to the peers in the same room
+   * @param {object} config data to send to the peers in the same room
+   */
+  async function sendToRoom(room_id, socket_id, msg, config = {}) {
+    for (let peer_id in channels[room_id]) {
+      // not send data to myself
+      if (peer_id != socket_id) {
+        await channels[room_id][peer_id].emit(msg, config);
+        //console.log('Send to room', { msg: msg, config: config });
+      }
+    }
+  }
+
+  /**
+   * Send async data to specified peer
+   * @param {string} peer_id id of the peer to send data
+   * @param {object} sockets all peers connections
+   * @param {string} msg message to send to the peer in the same room
+   * @param {object} config data to send to the peer in the same room
+   */
+  async function sendToPeer(peer_id, sockets, msg, config = {}) {
+    if (peer_id in sockets) {
+      await sockets[peer_id].emit(msg, config);
+      //console.log('Send to peer', { msg: msg, config: config });
+    }
+  }
 }); // end [sockets.on-connect]
